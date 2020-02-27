@@ -5,6 +5,7 @@ from PIL.ImageQt import ImageQt
 from PIL import Image
 from io import BytesIO
 import requests
+from PyQt5.QtGui import QKeyEvent
 
 import sys
 
@@ -28,15 +29,23 @@ class Widget(QWidget, Ui_Form):
         self.zoom = z
         self.label_2.setText(f'Масштаб: {z}')
 
+    def keyPressEvent(self, a0: QKeyEvent) -> None:
+        if a0.key() == 16777238:
+            if self.zoom < 17:
+                self.zoom += 1
+        elif a0.key() == 16777239:
+            if self.zoom > 0:
+                self.zoom -= 1
+        self.horizontalSlider.setValue(self.zoom)
+        self.query()
+
     def query(self):
         map_request = {'l': 'map', 'z': str(self.zoom)}
         w, h = self.lineEdit.text(), self.lineEdit_2.text()
-        print(1)
         if self.is_valid(w, h):
             map_request['ll'] = f'{w},{h}'
         else:
             return
-        print(2)
         url = 'http://static-maps.yandex.ru/1.x/'
         request = requests.get(url, params=map_request)
         self.label_3.setPixmap(QPixmap.fromImage(ImageQt(Image.open(BytesIO(request.content)))))
