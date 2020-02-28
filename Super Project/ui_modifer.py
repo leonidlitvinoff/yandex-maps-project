@@ -99,9 +99,8 @@ class Widget(QWidget, Ui_Form):
             return
         url = 'http://static-maps.yandex.ru/1.x/'
         request = requests.get(url, params=map_request)
-        print(3)
         self.label_3.setPixmap(QPixmap.fromImage(ImageQt(Image.open(BytesIO(request.content)))))
-        print(4)
+
 
     def is_valid(self, w, h, show_error=True, debag=False):
         if debag:
