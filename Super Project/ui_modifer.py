@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QErrorMessage
 from PyQt5.QtGui import QPixmap
 from PIL.ImageQt import ImageQt
 from PIL import Image
-from io import BytesIO
 import requests
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtCore import Qt
@@ -23,6 +22,7 @@ class Widget(QWidget, Ui_Form):
         self.pushButton.clicked.connect(self.query)
         self.pushButton_2.clicked.connect(self.editMoveMapMode)
         self.horizontalSlider.sliderReleased.connect(self.query)
+        self.comboBox.currentIndexChanged.connect(self.query)
         self.w = 0.0
         self.h = 0.0
         self.move_map_mode = False
@@ -46,6 +46,14 @@ class Widget(QWidget, Ui_Form):
                          15: 0.0002,
                          16: 0.00008,
                          17: 0.000046}
+        self.type_map = {0: 'map',
+                         1: 'sat',
+                         2: 'sat,skl'}
+
+    def indexChanged(self):
+        self.query()
+        print(1)
+        return 1
 
     def editMoveMapMode(self, value=False):
         self.lineEdit.setEnabled(value)
@@ -53,9 +61,8 @@ class Widget(QWidget, Ui_Form):
         self.horizontalSlider.setEnabled(value)
         self.pushButton.setEnabled(value)
         self.pushButton_2.setEnabled(value)
+        self.comboBox.setEnabled(value)
         self.move_map_mode = not value
-
-
 
     def changeZoom(self, z):
         self.zoom = z
@@ -91,16 +98,19 @@ class Widget(QWidget, Ui_Form):
                     self.query()
 
     def query(self):
-        map_request = {'l': 'map', 'z': str(self.zoom)}
+        map_request = {'l': self.type_map[self.comboBox.currentIndex()], 'z': str(self.zoom)}
         w, h = self.lineEdit.text(), self.lineEdit_2.text()
         if self.is_valid(w, h):
-            map_request['ll'] = f'{float(w) + self.w},{float(h) + self.h}'
+            if -180 <= self.w + float(w) <= 180 and -90 <= self.h + float(h) <= 90:
+                map_request['ll'] = f'{float(w) + self.w},{float(h) + self.h}'
+            else:
+                return
         else:
             return
         url = 'http://static-maps.yandex.ru/1.x/'
-        request = requests.get(url, params=map_request)
-        self.label_3.setPixmap(QPixmap.fromImage(ImageQt(Image.open(BytesIO(request.content)))))
-
+        request = requests.get(url, params=map_request, stream=True).raw
+        a = QPixmap.fromImage(ImageQt(Image.open(request).convert('RGBA')))
+        self.label_3.setPixmap(a)
 
     def is_valid(self, w, h, show_error=True, debag=False):
         if debag:
@@ -128,6 +138,7 @@ class Widget(QWidget, Ui_Form):
         if debag:
             print('проверка ограничения долготы (-90 - 90)')
         if h >= 90 or h <= -90:
+            print(2)
             self.error('Неверная широта (от -90 до 90)')
             return
 
