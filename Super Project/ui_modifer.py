@@ -49,6 +49,18 @@ class Widget(QWidget, Ui_Form):
         self.type_map = {0: 'map',
                          1: 'sat',
                          2: 'sat,skl'}
+        print(dir(self.lineEdit))
+
+    def keyReleaseEvent(self, a0: QKeyEvent) -> None:
+        if self.lineEdit.text() != '' or self.lineEdit_2.text() != '':
+            self.lineEdit_3.setEnabled(False)
+        elif self.lineEdit_3.text() != '':
+            self.lineEdit.setEnabled(False)
+            self.lineEdit_2.setEnabled(False)
+        else:
+            self.lineEdit.setEnabled(True)
+            self.lineEdit_2.setEnabled(True)
+            self.lineEdit_3.setEnabled(True)
 
     def indexChanged(self):
         self.query()
@@ -58,6 +70,7 @@ class Widget(QWidget, Ui_Form):
     def editMoveMapMode(self, value=False):
         self.lineEdit.setEnabled(value)
         self.lineEdit_2.setEnabled(value)
+        self.lineEdit_3.setEnabled(value)
         self.horizontalSlider.setEnabled(value)
         self.pushButton.setEnabled(value)
         self.pushButton_2.setEnabled(value)
@@ -98,25 +111,70 @@ class Widget(QWidget, Ui_Form):
                     self.query()
 
     def query(self):
-        map_request = {'l': self.type_map[self.comboBox.currentIndex()], 'z': str(self.zoom)}
-        w, h = self.lineEdit.text(), self.lineEdit_2.text()
-        if self.is_valid(w, h):
-            if -180 <= self.w + float(w) <= 180 and -90 <= self.h + float(h) <= 90:
-                map_request['ll'] = f'{float(w) + self.w},{float(h) + self.h}'
+        if self.lineEdit.text() != '' or self.lineEdit_2.text() != '':
+            map_request = {'l': self.type_map[self.comboBox.currentIndex()], 'z': str(self.zoom)}
+            w, h = self.lineEdit.text(), self.lineEdit_2.text()
+            if self.is_valid(w, h):
+                if -180 <= self.w + float(w) <= 180 and -90 <= self.h + float(h) <= 90:
+                    map_request['ll'] = f'{float(w) + self.w},{float(h) + self.h}'
+                else:
+                    return
             else:
                 return
-        else:
-            return
-        url = 'http://static-maps.yandex.ru/1.x/'
-        request = requests.get(url, params=map_request, stream=True).raw
-        a = QPixmap.fromImage(ImageQt(Image.open(request).convert('RGBA')))
-        self.label_3.setPixmap(a)
+            url = 'http://static-maps.yandex.ru/1.x/'
+            request = requests.get(url, params=map_request, stream=True).raw
+            a = QPixmap.fromImage(ImageQt(Image.open(request).convert('RGBA')))
+            self.label_3.setPixmap(a)
+        elif self.lineEdit_3.text() != '':
+            toponym_to_find = self.lineEdit_3.text()
 
-    def is_valid(self, w, h, show_error=True, debag=False):
+            geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+
+            geocoder_params = {
+                "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+                "geocode": toponym_to_find,
+                "format": "json"}
+
+            response = requests.get(geocoder_api_server, params=geocoder_params)
+            if not response:
+                pass
+
+            json_response = response.json()
+
+            toponym = json_response["response"]["GeoObjectCollection"][
+                "featureMember"][0]["GeoObject"]
+
+            toponym_coodrinates = toponym["Point"]["pos"]
+            toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+            if self.is_valid(toponym_longitude, toponym_lattitude, address=2, coords=[toponym_longitude, toponym_lattitude]):
+                toponym_longitude = float(toponym_longitude)
+                toponym_lattitude = float(toponym_lattitude)
+            else:
+                return
+            if toponym_longitude + self.w > 180 or toponym_longitude + self.w < -180 or toponym_lattitude + self.h > 90 or toponym_lattitude + self.h < -90:
+                return
+            print(1)
+            map_params = {
+                "ll": ",".join([str(toponym_longitude + self.w), str(toponym_lattitude + self.h)]),
+                "l": "map",
+                "z": self.zoom,
+                'pt': ','.join(toponym_coodrinates.split()) + ',pmwtm'
+            }
+
+            map_api_server = "http://static-maps.yandex.ru/1.x/"
+            response = requests.get(map_api_server, params=map_params, stream=True).raw
+            a = QPixmap.fromImage(ImageQt(Image.open(response).convert('RGBA')))
+            self.label_3.setPixmap(a)
+
+    def is_valid(self, w, h, show_error=True, debag=False, address=1, coords=None):
+        print(w, h)
         if debag:
             print('перевод долготы в float')
         try:
-            w = float(self.lineEdit.text())
+            if address == 1:
+                w = float(self.lineEdit.text())
+            else:
+                w = float(coords[0])
         except Exception:
             self.error('Неверная долгота (выражается вещественным числом, через точку)')
             return
@@ -130,7 +188,10 @@ class Widget(QWidget, Ui_Form):
         if debag:
             print('перевод широта в float')
         try:
-            h = float(self.lineEdit.text())
+            if address == 1:
+                h = float(self.lineEdit.text())
+            else:
+                h = float(coords[1])
         except Exception:
             self.error('Неверная широта (выражается вещественным числом, через точку)')
             return
