@@ -1,32 +1,34 @@
 from PyQt5.QtWidgets import QWidget, QApplication
 from PyQt5.QtWidgets import QErrorMessage
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtGui import QPixmap
 from PIL.ImageQt import ImageQt
-from PIL import Image
-import requests
-from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtCore import Qt
-
+from PIL import Image
+from requests import get
 import sys
 
 sys.path.append('data\\ui-py\\')
 
-from mainWindow import Ui_Form
+from mainWindow2 import Ui_FormMap
 
 
-class Widget(QWidget, Ui_Form):
+class Widget(QWidget, Ui_FormMap):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.horizontalSlider.valueChanged.connect(self.changeZoom)
-        self.pushButton.clicked.connect(self.query)
-        self.pushButton_2.clicked.connect(self.editMoveMapMode)
-        self.horizontalSlider.sliderReleased.connect(self.query)
-        self.comboBox.currentIndexChanged.connect(self.query)
-        self.w = 0.0
-        self.h = 0.0
+
+        self.zoom.valueChanged.connect(self.changeScale)
+        self.adress.textChanged.connect(self.changeTypeQuery)
+        self.Button_Search.clicked.connect(self.reset_and_query)
+        self.Button_SettingMap.clicked.connect(self.editMoveMapMode)
+        self.zoom.sliderReleased.connect(self.query)
+        self.TypeMap.currentIndexChanged.connect(self.query)
+
+        self.editMoveMapMode(True)
+
+        self.shift_w = self.shift_h = 0
         self.move_map_mode = False
-        self.zoom = 0
         self.error_msg = QErrorMessage()
         self.zoom_map = {0: 18,
                          1: 24,
@@ -46,164 +48,104 @@ class Widget(QWidget, Ui_Form):
                          15: 0.0002,
                          16: 0.00008,
                          17: 0.000046}
+
         self.type_map = {0: 'map',
                          1: 'sat',
                          2: 'sat,skl'}
-        print(dir(self.lineEdit))
 
-    def keyReleaseEvent(self, a0: QKeyEvent) -> None:
-        if self.lineEdit.text() != '' or self.lineEdit_2.text() != '':
-            self.lineEdit_3.setEnabled(False)
-        elif self.lineEdit_3.text() != '':
-            self.lineEdit.setEnabled(False)
-            self.lineEdit_2.setEnabled(False)
+    def changeTypeQuery(self):
+        if self.adress.text():
+            state = True
         else:
-            self.lineEdit.setEnabled(True)
-            self.lineEdit_2.setEnabled(True)
-            self.lineEdit_3.setEnabled(True)
+            state = False
 
-    def indexChanged(self):
-        self.query()
-        print(1)
-        return 1
+        self.latitude.setReadOnly(state)
+        self.longitude.setReadOnly(state)
 
     def editMoveMapMode(self, value=False):
-        self.lineEdit.setEnabled(value)
-        self.lineEdit_2.setEnabled(value)
-        self.lineEdit_3.setEnabled(value)
-        self.horizontalSlider.setEnabled(value)
-        self.pushButton.setEnabled(value)
-        self.pushButton_2.setEnabled(value)
-        self.comboBox.setEnabled(value)
+        self.latitude.setEnabled(value)
+        self.longitude.setEnabled(value)
+        self.adress.setEnabled(value)
+        self.zoom.setEnabled(value)
+        self.Button_Search.setEnabled(value)
+        self.Button_SettingMap.setEnabled(value)
+        self.TypeMap.setEnabled(value)
+        self.Button_SettingMap_label.setVisible(not value)
         self.move_map_mode = not value
 
-    def changeZoom(self, z):
-        self.zoom = z
-        self.label_2.setText(f'Масштаб: {z}')
+    def changeScale(self, scale):
+        self.zoom_label.setText(f'Масштаб: {scale}')
 
     def keyPressEvent(self, a0: QKeyEvent) -> None:
-        if a0.key() == Qt.Key_PageUp:
-            if self.zoom < 17:
-                self.zoom += 1
-                self.horizontalSlider.setValue(self.zoom)
-                self.query()
-        elif a0.key() == Qt.Key_PageDown:
-            if self.zoom > 0:
-                self.zoom -= 1
-                self.horizontalSlider.setValue(self.zoom)
-                self.query()
-        elif a0.key() == Qt.Key_Escape:
-            if self.move_map_mode:
+        if a0.key() == Qt.Key_PageUp and self.zoom.value() < 17:
+            self.zoom.setValue(self.zoom.value() + 1)
+        elif a0.key() == Qt.Key_PageDown and self.zoom.value() > 0:
+            self.zoom.setValue(self.zoom.value() - 1)
+        elif self.move_map_mode:  # Режим редактирования
+            step = self.zoom_map[self.zoom.value()]
+            if a0.key() == Qt.Key_Escape:
                 self.editMoveMapMode(True)
+                return
+            elif a0.key() == Qt.Key_Up and self.latitude.value() + self.shift_w + step <= 90:
+                self.shift_w += step
+            elif a0.key() == Qt.Key_Down and self.latitude.value() + self.shift_w - step >= -90:
+                self.shift_w -= step
+            elif a0.key() == Qt.Key_Left and self.longitude.value() + self.shift_h - step >= -180:
+                self.shift_h -= step
+            elif a0.key() == Qt.Key_Right and self.longitude.value() + self.shift_h + step <= 180:
+                self.shift_h += step
         else:
-            if self.move_map_mode:
-                if a0.key() == Qt.Key_Up:
-                    self.h += self.zoom_map[self.zoom]
-                    self.query()
-                elif a0.key() == Qt.Key_Down:
-                    self.h -= self.zoom_map[self.zoom]
-                    self.query()
-                elif a0.key() == Qt.Key_Left:
-                    self.w -= self.zoom_map[self.zoom]
-                    self.query()
-                elif a0.key() == Qt.Key_Right:
-                    self.w += self.zoom_map[self.zoom]
-                    self.query()
+            return
+        self.query()
+
+    def reset_and_query(self):
+        self.shift_w = self.shift_h = 0
+        self.query()
 
     def query(self):
-        if self.lineEdit.text() != '' or self.lineEdit_2.text() != '':
-            map_request = {'l': self.type_map[self.comboBox.currentIndex()], 'z': str(self.zoom)}
-            w, h = self.lineEdit.text(), self.lineEdit_2.text()
-            if self.is_valid(w, h):
-                if -180 <= self.w + float(w) <= 180 and -90 <= self.h + float(h) <= 90:
-                    map_request['ll'] = f'{float(w) + self.w},{float(h) + self.h}'
-                else:
-                    return
-            else:
-                return
-            url = 'http://static-maps.yandex.ru/1.x/'
-            request = requests.get(url, params=map_request, stream=True).raw
-            a = QPixmap.fromImage(ImageQt(Image.open(request).convert('RGBA')))
-            self.label_3.setPixmap(a)
-        elif self.lineEdit_3.text() != '':
-            toponym_to_find = self.lineEdit_3.text()
-
-            geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
-
+        # Если В запросе указан адресс, сначало находим его широту и долготу
+        if self.adress.text():
             geocoder_params = {
                 "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
-                "geocode": toponym_to_find,
+                "geocode": self.adress.text(),
                 "format": "json"}
 
-            response = requests.get(geocoder_api_server, params=geocoder_params)
+            response = get("http://geocode-maps.yandex.ru/1.x/", params=geocoder_params)
+
             if not response:
-                pass
+                self.error('Ошибка подключения, проверьте интернет')
+                return False
 
             json_response = response.json()
 
-            toponym = json_response["response"]["GeoObjectCollection"][
-                "featureMember"][0]["GeoObject"]
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"]
+            if not toponym:
+                self.error('Не удалось найти обьект (Введите другой адрес)')
+                return False
 
-            toponym_coodrinates = toponym["Point"]["pos"]
+            toponym_coodrinates = toponym[0]["GeoObject"]["Point"]["pos"]
             toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
-            if self.is_valid(toponym_longitude, toponym_lattitude, address=2, coords=[toponym_longitude, toponym_lattitude]):
-                toponym_longitude = float(toponym_longitude)
-                toponym_lattitude = float(toponym_lattitude)
-            else:
-                return
-            if toponym_longitude + self.w > 180 or toponym_longitude + self.w < -180 or toponym_lattitude + self.h > 90 or toponym_lattitude + self.h < -90:
-                return
-            print(1)
-            map_params = {
-                "ll": ",".join([str(toponym_longitude + self.w), str(toponym_lattitude + self.h)]),
-                "l": "map",
-                "z": self.zoom,
-                'pt': ','.join(toponym_coodrinates.split()) + ',pmwtm'
-            }
 
-            map_api_server = "http://static-maps.yandex.ru/1.x/"
-            response = requests.get(map_api_server, params=map_params, stream=True).raw
-            a = QPixmap.fromImage(ImageQt(Image.open(response).convert('RGBA')))
-            self.label_3.setPixmap(a)
+            self.longitude.setValue(float(toponym_longitude))
+            self.latitude.setValue(float(toponym_lattitude))
 
-    def is_valid(self, w, h, show_error=True, debag=False, address=1, coords=None):
-        print(w, h)
-        if debag:
-            print('перевод долготы в float')
-        try:
-            if address == 1:
-                w = float(self.lineEdit.text())
-            else:
-                w = float(coords[0])
-        except Exception:
-            self.error('Неверная долгота (выражается вещественным числом, через точку)')
-            return
+        map_params = {
+            "ll": f"{self.longitude.value() + self.shift_h},{self.latitude.value() + self.shift_w}",
+            "l": self.type_map[self.TypeMap.currentIndex()],
+            "z": self.zoom.value(),
+        }
 
-        if debag:
-            print('проверка ограничения долготы (-180 - 180)')
-        if w >= 180 or w <= -180:
-            self.error('Неверная долгота (от -180 до 180)')
-            return
+        if self.adress.text():
+            map_params['pt'] = f"{self.longitude.value()},{self.latitude.value()}" + ',vkbkm'
 
-        if debag:
-            print('перевод широта в float')
-        try:
-            if address == 1:
-                h = float(self.lineEdit.text())
-            else:
-                h = float(coords[1])
-        except Exception:
-            self.error('Неверная широта (выражается вещественным числом, через точку)')
-            return
+        url = 'http://static-maps.yandex.ru/1.x/'
+        request = get(url, params=map_params, stream=True).raw
 
-        if debag:
-            print('проверка ограничения долготы (-90 - 90)')
-        if h >= 90 or h <= -90:
-            print(2)
-            self.error('Неверная широта (от -90 до 90)')
-            return
+        if not request:
+            self.error('Ошибка подключения, проверьте интернет')
+            return False
 
-        return str(w), str(h)
+        self.Map.setPixmap(QPixmap.fromImage(ImageQt(Image.open(request).convert('RGBA'))))
 
     def error(self, msg):
         self.error_msg.showMessage(msg)
