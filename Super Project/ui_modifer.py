@@ -24,8 +24,10 @@ class Widget(QWidget, Ui_FormMap):
         self.Button_SettingMap.clicked.connect(self.editMoveMapMode)
         self.zoom.sliderReleased.connect(self.query)
         self.TypeMap.currentIndexChanged.connect(self.query)
+        self.Button_Clear.clicked.connect(self.clear)
 
         self.editMoveMapMode(True)
+        self.clear()
 
         self.shift_w = self.shift_h = 0
         self.move_map_mode = False
@@ -61,6 +63,16 @@ class Widget(QWidget, Ui_FormMap):
 
         self.latitude.setReadOnly(state)
         self.longitude.setReadOnly(state)
+
+    def clear(self):
+        self.latitude.setValue(0)
+        self.longitude.setValue(0)
+        self.TypeMap.setCurrentIndex(0)
+        self.adress.clear()
+        self.label_adress_info.clear()
+        self.label_adress_info.setVisible(False)
+        self.zoom.setValue(0)
+        self.Map.clear()
 
     def editMoveMapMode(self, value=False):
         self.latitude.setEnabled(value)
@@ -118,13 +130,17 @@ class Widget(QWidget, Ui_FormMap):
 
             json_response = response.json()
 
-            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"]
-            if not toponym:
+            toponyms = json_response["response"]["GeoObjectCollection"]["featureMember"]
+            if not toponyms:
                 self.error('Не удалось найти обьект (Введите другой адрес)')
                 return False
 
-            toponym_coodrinates = toponym[0]["GeoObject"]["Point"]["pos"]
+            toponym = toponyms[0]["GeoObject"]
+            toponym_coodrinates = toponym["Point"]["pos"]
             toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+
+            self.label_adress_info.setVisible(True)
+            self.label_adress_info.setText(toponym['metaDataProperty']['GeocoderMetaData']['text'])
 
             self.longitude.setValue(float(toponym_longitude))
             self.latitude.setValue(float(toponym_lattitude))
