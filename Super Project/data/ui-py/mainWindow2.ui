@@ -30,6 +30,16 @@
       </spacer>
      </item>
      <item>
+      <widget class="QCheckBox" name="checkBox_PostCode">
+       <property name="layoutDirection">
+        <enum>Qt::RightToLeft</enum>
+       </property>
+       <property name="text">
+        <string>почтовый индекс</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLabel" name="label_adress_info">
        <property name="frameShape">
         <enum>QFrame::Box</enum>

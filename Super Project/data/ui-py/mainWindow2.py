@@ -19,6 +19,10 @@ class Ui_FormMap(object):
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem)
+        self.checkBox_PostCode = QtWidgets.QCheckBox(FormMap)
+        self.checkBox_PostCode.setLayoutDirection(QtCore.Qt.RightToLeft)
+        self.checkBox_PostCode.setObjectName("checkBox_PostCode")
+        self.horizontalLayout_3.addWidget(self.checkBox_PostCode)
         self.label_adress_info = QtWidgets.QLabel(FormMap)
         self.label_adress_info.setFrameShape(QtWidgets.QFrame.Box)
         self.label_adress_info.setText("")
@@ -169,6 +173,7 @@ class Ui_FormMap(object):
     def retranslateUi(self, FormMap):
         _translate = QtCore.QCoreApplication.translate
         FormMap.setWindowTitle(_translate("FormMap", "Form"))
+        self.checkBox_PostCode.setText(_translate("FormMap", "почтовый индекс"))
         self.Button_SettingMap.setText(_translate("FormMap", "Управление картой"))
         self.Button_SettingMap_label.setText(_translate("FormMap", "(для выхода нажмите Escape)"))
         self.Button_Clear.setText(_translate("FormMap", "Сброс"))

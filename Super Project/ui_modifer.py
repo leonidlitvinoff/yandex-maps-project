@@ -25,11 +25,13 @@ class Widget(QWidget, Ui_FormMap):
         self.zoom.sliderReleased.connect(self.query)
         self.TypeMap.currentIndexChanged.connect(self.query)
         self.Button_Clear.clicked.connect(self.clear)
+        self.checkBox_PostCode.stateChanged.connect(self.changePostCode)
 
         self.editMoveMapMode(True)
         self.clear()
 
         self.shift_w = self.shift_h = 0
+        self.post_code = ''
         self.move_map_mode = False
         self.error_msg = QErrorMessage()
         self.zoom_map = {0: 18,
@@ -64,6 +66,14 @@ class Widget(QWidget, Ui_FormMap):
         self.latitude.setReadOnly(state)
         self.longitude.setReadOnly(state)
 
+    def changePostCode(self, state):
+        text = self.label_adress_info.text()
+        if state:
+            text += self.post_code
+        else:
+            text = text[:len(text) - len(self.post_code)]
+        self.label_adress_info.setText(text)
+
     def clear(self):
         self.latitude.setValue(0)
         self.longitude.setValue(0)
@@ -71,6 +81,9 @@ class Widget(QWidget, Ui_FormMap):
         self.adress.clear()
         self.label_adress_info.clear()
         self.label_adress_info.setVisible(False)
+        self.checkBox_PostCode.setVisible(False)
+        self.post_code = ''
+        self.checkBox_PostCode.setCheckState(0)
         self.zoom.setValue(0)
         self.Map.clear()
 
@@ -140,7 +153,12 @@ class Widget(QWidget, Ui_FormMap):
             toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
 
             self.label_adress_info.setVisible(True)
-            self.label_adress_info.setText(toponym['metaDataProperty']['GeocoderMetaData']['text'])
+
+            meta_data = toponym['metaDataProperty']['GeocoderMetaData']
+            if meta_data['Address'].get('postal_code', False):
+                self.checkBox_PostCode.setVisible(True)
+                self.post_code = f", {meta_data['Address']['postal_code']}"
+            self.label_adress_info.setText(meta_data['text'])
 
             self.longitude.setValue(float(toponym_longitude))
             self.latitude.setValue(float(toponym_lattitude))
