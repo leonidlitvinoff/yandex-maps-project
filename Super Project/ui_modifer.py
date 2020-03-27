@@ -95,6 +95,9 @@ class Widget(QWidget, Ui_FormMap):
         self.Button_Search.setEnabled(value)
         self.Button_SettingMap.setEnabled(value)
         self.TypeMap.setEnabled(value)
+        self.Button_Clear.setEnabled(value)
+        self.checkBox_PostCode.setEnabled(value)
+        self.label_adress_info.setEnabled(value)
         self.Button_SettingMap_label.setVisible(not value)
         self.move_map_mode = not value
 
