@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QApplication
 from PyQt5.QtWidgets import QErrorMessage
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtGui import QPixmap
 from PIL.ImageQt import ImageQt
@@ -17,9 +18,11 @@ class Widget(QWidget, Ui_FormMap):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.timer = QTimer()
 
+        self.timer.timeout.connect(self.query)
         self.zoom.valueChanged.connect(self.changeScale)
-        self.adress.textChanged.connect(self.changeTypeQuery)
+        self.adress.textChanged.connect(self.timer_query)
         self.Button_Search.clicked.connect(self.reset_and_query)
         self.Button_SettingMap.clicked.connect(self.editMoveMapMode)
         self.zoom.sliderReleased.connect(self.query)
@@ -57,14 +60,22 @@ class Widget(QWidget, Ui_FormMap):
                          1: 'sat',
                          2: 'sat,skl'}
 
-    def changeTypeQuery(self):
+    def timer_query(self):
         if self.adress.text():
             state = True
+            if self.timer.isActive():
+                self.timer.stop()
+            self.timer.start(1500)
         else:
             state = False
+            self.setVisibleAdressInfo(False)
 
         self.latitude.setReadOnly(state)
         self.longitude.setReadOnly(state)
+
+    def setVisibleAdressInfo(self, visible: bool) -> None:
+        self.label_adress_info.setVisible(visible)
+        self.checkBox_PostCode.setVisible(visible)
 
     def changePostCode(self, state):
         text = self.label_adress_info.text()
