@@ -19,6 +19,7 @@ class Widget(QWidget, Ui_FormMap):
         super().__init__()
         self.setupUi(self)
         self.timer = QTimer()
+        self.timer.setSingleShot(True)
 
         self.timer.timeout.connect(self.query)
         self.zoom.valueChanged.connect(self.changeScale)
@@ -63,8 +64,6 @@ class Widget(QWidget, Ui_FormMap):
     def timer_query(self):
         if self.adress.text():
             state = True
-            if self.timer.isActive():
-                self.timer.stop()
             self.timer.start(1500)
         else:
             state = False
@@ -79,11 +78,13 @@ class Widget(QWidget, Ui_FormMap):
 
     def changePostCode(self, state):
         text = self.label_adress_info.text()
+
         if state:
-            text += self.post_code
+            new_text = text + self.post_code
         else:
-            text = text[:len(text) - len(self.post_code)]
-        self.label_adress_info.setText(text)
+            new_text = text[:-len(self.post_code)]
+
+        self.label_adress_info.setText(new_text)
 
     def clear(self):
         self.latitude.setValue(0)

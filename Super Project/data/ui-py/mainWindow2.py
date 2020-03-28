@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_FormMap(object):
     def setupUi(self, FormMap):
         FormMap.setObjectName("FormMap")
-        FormMap.resize(998, 611)
+        FormMap.resize(920, 596)
         self.gridLayout_2 = QtWidgets.QGridLayout(FormMap)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
@@ -25,7 +25,9 @@ class Ui_FormMap(object):
         self.horizontalLayout_3.addWidget(self.checkBox_PostCode)
         self.label_adress_info = QtWidgets.QLabel(FormMap)
         self.label_adress_info.setFrameShape(QtWidgets.QFrame.Box)
+        self.label_adress_info.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.label_adress_info.setText("")
+        self.label_adress_info.setTextFormat(QtCore.Qt.PlainText)
         self.label_adress_info.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextSelectableByMouse)
         self.label_adress_info.setObjectName("label_adress_info")
         self.horizontalLayout_3.addWidget(self.label_adress_info)
@@ -151,6 +153,7 @@ class Ui_FormMap(object):
         self.Map.setSizePolicy(sizePolicy)
         self.Map.setFrameShape(QtWidgets.QFrame.Panel)
         self.Map.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.Map.setLineWidth(1)
         self.Map.setText("")
         self.Map.setAlignment(QtCore.Qt.AlignCenter)
         self.Map.setObjectName("Map")
